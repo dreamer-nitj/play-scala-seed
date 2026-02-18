@@ -9,6 +9,8 @@ import play.api.mvc._
 import play.api.libs.json.Json
 import play.api.libs.json.JsValue
 import play.api.libs.json.OFormat
+import actions.AuthenticatedRequest
+import actions.AuthAction
 
 case class LoginRequest(username: String, password: String)
 case class LoginResponse(token: String, username: String)
@@ -17,7 +19,8 @@ case class LoginResponse(token: String, username: String)
 class LoginController @Inject() (
   val controllerComponents: ControllerComponents,
   config: Configuration,
-  userRepository: UserRepository
+  userRepository: UserRepository,
+  authAction: AuthAction
 )(implicit ec: ExecutionContext)
     extends BaseController {
 
@@ -49,5 +52,11 @@ class LoginController @Inject() (
       case ex: Exception =>
         Future.successful(BadRequest(Json.obj("error" -> "Invalid request format")))
     }
+  }
+
+  def refreshToken() = authAction.async { implicit request: AuthenticatedRequest[AnyContent] =>
+    // generate a new token with the same user info
+    val newToken = jwtUtil.generateToken(request.userId.toInt, request.username)
+    Future.successful(Ok(Json.toJson(LoginResponse(newToken, request.username))))
   }
 }

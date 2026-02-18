@@ -33,13 +33,8 @@ class HomeController @Inject() (
     * The configuration in the `routes` file means that this method will be called when the application receives a `GET`
     * request with a path of `/`.
     */
-  def index() = Action { implicit request: Request[AnyContent] =>
-    authenticateBasicAuth(request) match {
-      case Some((username, password)) if isValidCredentials(username, password) =>
-        Ok(views.html.index())
-      case _ =>
-        Unauthorized.withHeaders("WWW-Authenticate" -> "Basic realm=\"Secured Area\"")
-    }
+  def index() = authAction { implicit request: Request[AnyContent] =>
+    Ok(views.html.index())
   }
 
   private def authenticateBasicAuth[A](request: Request[A]): Option[(String, String)] =

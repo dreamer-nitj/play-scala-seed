@@ -4,8 +4,10 @@
 # ~~~~
 
 # An example controller showing a sample home page
-GET     /                           controllers.HomeController.index()
+GET     /                              controllers.HomeController.index()
 POST   /login                          controllers.LoginController.login()
+POST   /refresh-token                  controllers.LoginController.refreshToken()
+
 
 # users endpoints
 GET     /users                      controllers.HomeController.getUsers()
