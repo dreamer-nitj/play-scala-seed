@@ -13,6 +13,7 @@ import org.apache.pekko.util.Timeout
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.actor.Props
 import actions.AuthAction
+import actions.AuthenticatedRequest
 
 /** This controller creates an `Action` to handle HTTP requests to the application's home page.
   */
@@ -56,16 +57,12 @@ class HomeController @Inject() (
       }
     }
 
-  private def isValidCredentials(username: String, password: String): Boolean =
-    // Replace with your actual authentication logic
-    username == "admin" && password == "password123"
-
   def index2(request: Request[AnyContent]) = Action {
     Ok(views.html.index())
   }
 
   // protected endpoint that requires JWT
-  def getUsers() = Action.async { implicit request: Request[AnyContent] =>
+  def getUsers() = authAction.async { implicit request: Request[AnyContent] =>
     (userActor ? UserActor.GetAllUsers)
       .mapTo[UserActor.UserResponse]
       .map { response =>
@@ -77,7 +74,7 @@ class HomeController @Inject() (
   }
 
   // add a new user to the database. The user details can be passed in the request body as JSON.
-  def addUser() = Action.async(parse.json) { implicit request: Request[play.api.libs.json.JsValue] =>
+  def addUser() = authAction.async(parse.json) { implicit request: Request[play.api.libs.json.JsValue] =>
     val name  = (request.body \ "name").as[String]
     val email = (request.body \ "email").as[String]
     val user  = models.User(0, name, email) // id will be auto-generated
@@ -93,37 +90,32 @@ class HomeController @Inject() (
   }
 
   // update an existing user in the database. The user details can be passed in the request body as JSON.
-  def updateUser() = Action.async(parse.json) { implicit request: Request[play.api.libs.json.JsValue] =>
-    authenticateBasicAuth(request) match {
-      case Some((username, password)) if isValidCredentials(username, password) =>
-        // Proceed with updating the user
-        // Extract the user details from the request body as UpdateUserRequest using validate and asOpt methods to handle potential parsing errors gracefully.
-        request.body.validate[models.UserUpdateRequest].asOpt match {
-          case Some(userUpdate) =>
-            userRepository
-              .getUserByEmail(userUpdate.email)
-              .flatMap {
-                case Some(existingUser) =>
-                  val updatedUser = models.User(existingUser.id, userUpdate.name, userUpdate.email)
-                  userRepository
-                    .updateUser(updatedUser)
-                    .map { _ =>
-                      Ok("User updated successfully")
-                    }
-                    .recover { case ex: Exception =>
-                      InternalServerError("Error updating user: " + ex.getMessage)
-                    }
-                case _ =>
-                  Future.successful(BadRequest("Invalid user data"))
-              }
-              .recover { case ex: Exception =>
-                InternalServerError("Error fetching user by email: " + ex.getMessage)
-              }
-          case None =>
-            Future.successful(BadRequest("Invalid request body"))
-        }
-      case _ =>
-        Future.successful(Unauthorized.withHeaders("WWW-Authenticate" -> "Basic realm=\"Secured Area\""))
+  def updateUser() = authAction.async(parse.json) { implicit request: Request[play.api.libs.json.JsValue] =>
+    // Proceed with updating the user
+    // Extract the user details from the request body as UpdateUserRequest using validate and asOpt methods to handle potential parsing errors gracefully.
+    request.body.validate[models.UserUpdateRequest].asOpt match {
+      case Some(userUpdate) =>
+        userRepository
+          .getUserByEmail(userUpdate.email)
+          .flatMap {
+            case Some(existingUser) =>
+              val updatedUser = models.User(existingUser.id, userUpdate.name, userUpdate.email)
+              userRepository
+                .updateUser(updatedUser)
+                .map { _ =>
+                  Ok("User updated successfully")
+                }
+                .recover { case ex: Exception =>
+                  InternalServerError("Error updating user: " + ex.getMessage)
+                }
+            case _ =>
+              Future.successful(BadRequest("Invalid user data"))
+          }
+          .recover { case ex: Exception =>
+            InternalServerError("Error fetching user by email: " + ex.getMessage)
+          }
+      case None =>
+        Future.successful(BadRequest("Invalid request body"))
     }
   }
 }
