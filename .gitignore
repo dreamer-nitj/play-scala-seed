@@ -1,0 +1,34 @@
+# Scala & SBT
+target/
+project/target/
+project/project/
+.bsp/
+.metals/
+.vscode/
+.idea/
+.bloop/
+.g8/
+
+# Logs
+logs/
+*.log
+
+# Play Framework
+dist/
+RUNNING_PID
+/.settings
+
+# IDE
+*.iml
+*.ipr
+*.iws
+.DS_Store
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# Secrets (important!)
+application.secret
+*.env
