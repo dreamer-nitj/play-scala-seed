@@ -153,4 +153,20 @@ class UserRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(implic
         .map(u => (u.googleAccessToken, u.googleTokenExpiresAt))
         .update((Some(accessToken), Some(expiresAt)))
     )
+
+  def findUsersWithExpiringGoogleTokens(expiringBefore: Long): Future[Seq[User]] =
+    dbConfig.db.run(
+      Users
+        .filter(u => u.googleRefreshToken.isDefined && u.googleTokenExpiresAt.isDefined)
+        .filter(_.googleTokenExpiresAt <= expiringBefore)
+        .result
+    )
+
+  def clearGoogleTokens(userId: Int): Future[Int] =
+    dbConfig.db.run(
+      Users
+        .filter(_.id === userId)
+        .map(u => (u.googleAccessToken, u.googleRefreshToken, u.googleTokenExpiresAt))
+        .update((None, None, None))
+    )
 }

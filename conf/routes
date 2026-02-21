@@ -14,5 +14,9 @@ GET     /users                      controllers.HomeController.getUsers()
 POST    /users                      controllers.HomeController.addUser()
 PUT     /users                      controllers.HomeController.updateUser()
 
+GET     /auth/google/login           controllers.LoginController.googleLogin
+GET     /auth/google/callback        controllers.LoginController.googleCallback
+POST    /auth/google/link-account    controllers.LoginController.linkGoogleAccount
+
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
