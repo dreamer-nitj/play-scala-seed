@@ -29,6 +29,10 @@ libraryDependencies ++= Seq(
   "io.jsonwebtoken" % "jjwt-jackson" % "0.11.5"
 )
 
+// libraryDependencies += "org.playframework" %% "play-ws" % "2.9.4"
+// libraryDependencies += "org.playframework" %% "play-ws" % "2.8.18"
+libraryDependencies += "org.playframework" %% "play-ws" % "3.0.1"
+
 // Adds additional packages into Twirl
 //TwirlKeys.templateImports += "com.example.controllers._"
 
