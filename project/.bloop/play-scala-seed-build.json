@@ -268,7 +268,7 @@
         "platform": {
             "name": "jvm",
             "config": {
-                "home": "/Users/ankitkumar/Library/Caches/Coursier/arc/https/cdn.azul.com/zulu/bin/zulu21.48.15-ca-jdk21.0.10-macosx_aarch64.tar.gz/zulu21.48.15-ca-jdk21.0.10-macosx_aarch64/zulu-21.jdk/Contents/Home",
+                "home": "/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home",
                 "options": [
                     "-Duser.dir=/Users/ankitkumar/Documents/srcs/play-scala-seed/project"
                 ]
@@ -277,7 +277,7 @@
                 
             ],
             "runtimeConfig": {
-                "home": "/Users/ankitkumar/Library/Caches/Coursier/arc/https/cdn.azul.com/zulu/bin/zulu21.48.15-ca-jdk21.0.10-macosx_aarch64.tar.gz/zulu21.48.15-ca-jdk21.0.10-macosx_aarch64/zulu-21.jdk/Contents/Home",
+                "home": "/opt/homebrew/Cellar/openjdk/25.0.2/libexec/openjdk.jdk/Contents/Home",
                 "options": [
                     "-Duser.dir=/Users/ankitkumar/Documents/srcs/play-scala-seed/project"
                 ]

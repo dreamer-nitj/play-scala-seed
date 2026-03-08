@@ -4,6 +4,12 @@ import org.scalatestplus.play._
 import org.scalatestplus.play.guice._
 import play.api.test._
 import play.api.test.Helpers._
+import dao.UserRepository
+import actions.AuthAction
+import org.apache.pekko.actor.ActorSystem
+import scala.concurrent.ExecutionContext
+import utils.JwtUtil
+import play.api.Configuration
 
 /**
  * Add your spec here.
@@ -13,11 +19,24 @@ import play.api.test.Helpers._
  */
 class HomeControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting {
 
+  lazy val config = inject[Configuration]
+  lazy val jwtUtil = new JwtUtil(
+    config.get[String]("jwt.secret"),
+    config.get[Int]("jwt.expiry-minutes")
+  )
+  lazy val authToken = jwtUtil.generateToken(1, "testuser")
+
   "HomeController GET" should {
 
     "render the index page from a new instance of controller" in {
-      val controller = new HomeController(stubControllerComponents())
-      val home = controller.index().apply(FakeRequest(GET, "/"))
+      val controller = new HomeController(
+        stubControllerComponents(),
+        inject[UserRepository],
+        inject[AuthAction],
+        inject[ActorSystem]
+      )(inject[ExecutionContext])
+      val request = FakeRequest(GET, "/").withHeaders("Authorization" -> s"Bearer $authToken")
+      val home = controller.index().apply(request)
 
       status(home) mustBe OK
       contentType(home) mustBe Some("text/html")
@@ -26,7 +45,8 @@ class HomeControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting
 
     "render the index page from the application" in {
       val controller = inject[HomeController]
-      val home = controller.index().apply(FakeRequest(GET, "/"))
+      val request = FakeRequest(GET, "/").withHeaders("Authorization" -> s"Bearer $authToken")
+      val home = controller.index().apply(request)
 
       status(home) mustBe OK
       contentType(home) mustBe Some("text/html")
@@ -34,7 +54,7 @@ class HomeControllerSpec extends PlaySpec with GuiceOneAppPerTest with Injecting
     }
 
     "render the index page from the router" in {
-      val request = FakeRequest(GET, "/")
+      val request = FakeRequest(GET, "/").withHeaders("Authorization" -> s"Bearer $authToken")
       val home = route(app, request).get
 
       status(home) mustBe OK
