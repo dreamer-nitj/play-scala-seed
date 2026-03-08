@@ -27,12 +27,8 @@ jobs:
           distribution: 'temurin'
           cache: 'sbt'
 
-      # the scala action is optional; if you keep it, it must *not* reset to 8
-      # - name: Set up Scala & sbt
-      #   uses: olafurpg/setup-scala@v13
-      #   with:
-      #     scala-version: 2.13.18
-      #     sbt-version: 1.9.0   # or whatever sbt you pin in build.properties
+      - name: Set up sbt
+        uses: sbt/setup-sbt@v1
 
       - name: Run tests
         run: sbt test
