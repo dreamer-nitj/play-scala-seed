@@ -40,3 +40,20 @@ jobs:
       - name: Upload dependency graph
         uses: scalacenter/sbt-dependency-submission@ab086b50c947c9774b70f39fc7f6e20ca2706c91
         continue-on-error: true
+
+      - name: Discord Notification
+        uses: Ilshidur/action-discord@0.3.2
+        if: always()
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          args: |
+            **Play Scala Seed CI ${{ job.status == 'success' && '✅ PASSED' || '❌ FAILED' }}**
+            
+            **Repository:** ${{ github.repository }}
+            **Branch:** ${{ github.ref_name }}
+            **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+            **Triggered by:** ${{ github.actor }}
+            
+            **Workflow:** ${{ github.workflow }}
+            **Run:** [View Details](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
