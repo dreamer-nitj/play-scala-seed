@@ -61,7 +61,7 @@ class HomeController @Inject() (
     (userActor ? UserActor.GetAllUsers)
       .mapTo[UserActor.UserResponse]
       .map { response =>
-        Ok(response.users.map(_.name).mkString(",") + "\n")
+        Ok(response.users.map(_.username).mkString(",") + "\n")
       }
       .recover { case ex: Exception =>
         InternalServerError("Error fetching users: " + ex.getMessage)
@@ -72,7 +72,7 @@ class HomeController @Inject() (
   def addUser() = authAction.async(parse.json) { implicit request: Request[play.api.libs.json.JsValue] =>
     val name  = (request.body \ "name").as[String]
     val email = (request.body \ "email").as[String]
-    val user  = models.User(0, name, email) // id will be auto-generated
+    val user  = models.User(id = 0, username = name, password = None, email = Some(email)) // id will be auto-generated
     userRepository
       .insertUser(user)
       .map { _ =>
@@ -94,7 +94,7 @@ class HomeController @Inject() (
           .getUserByEmail(userUpdate.email)
           .flatMap {
             case Some(existingUser) =>
-              val updatedUser = models.User(existingUser.id, userUpdate.name, userUpdate.email)
+              val updatedUser = existingUser.copy(username = userUpdate.username, email = Some(userUpdate.email))
               userRepository
                 .updateUser(updatedUser)
                 .map { _ =>

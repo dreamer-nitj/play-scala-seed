@@ -1,5 +1,6 @@
 package models
 
+import java.time.Instant
 import slick.jdbc.H2Profile.api._
 import slick.lifted.{ProvenShape, Tag}
 import play.api.libs.json.Json
@@ -20,12 +21,32 @@ case class User(
 )
 
 // The database table definition for the User model using Slick
-class Users(tag: slick.lifted.Tag) extends slick.jdbc.H2Profile.api.Table[User](tag, "USERS") {
-  def id       = column[Int]("ID", O.PrimaryKey, O.AutoInc)
-  def username = column[String]("USERNAME")
-  def email    = column[String]("EMAIL")
+class Users(tag: slick.lifted.Tag) extends slick.jdbc.H2Profile.api.Table[User](tag, "users") {
+  def id                   = column[Int]("id", O.PrimaryKey, O.AutoInc)
+  def username             = column[String]("username")
+  def password             = column[Option[String]]("password")
+  def email                = column[Option[String]]("email")
+  def emailVerified        = column[Boolean]("email_verified")
+  def googleId             = column[Option[String]]("google_id")
+  def googleAccessToken    = column[Option[String]]("google_access_token")
+  def googleRefreshToken   = column[Option[String]]("google_refresh_token")
+  def googleTokenExpiresAt = column[Option[Long]]("google_token_expires_at")
+  def pictureUrl           = column[Option[String]]("picture_url")
+  def oauthLinkedAt        = column[Option[Instant]]("oauth_linked_at")
 
-  def * = (id, username, email) <> (User.tupled, User.unapply)
+  def * = (
+    id,
+    username,
+    password,
+    email,
+    emailVerified,
+    googleId,
+    googleAccessToken,
+    googleRefreshToken,
+    googleTokenExpiresAt,
+    pictureUrl,
+    oauthLinkedAt
+  ) <> ((User.apply _).tupled, User.unapply)
 }
 
 case class UserUpdateRequest(

@@ -83,14 +83,15 @@ class AccountLinker @Inject() (userRepository: UserRepository)(implicit ec: Exec
     for {
       existingByGoogleId <- userRepository.findByGoogleId(googleId)
       existingByEmail    <- userRepository.findByEmail(googleEmail)
-    } yield {
-      (existingByGoogleId, existingByEmail) match {
+      result <- (existingByGoogleId, existingByEmail) match {
         case (Some(_), _) =>
-          Failure(new Exception("Google account already registered"))
+          Future.successful(Failure(new Exception("Google account already registered")))
         case (_, Some(_)) =>
-          Failure(
-            new Exception(
-              s"Email $googleEmail already exists. Please log in and link your account."
+          Future.successful(
+            Failure(
+              new Exception(
+                s"Email $googleEmail already exists. Please log in and link your account."
+              )
             )
           )
         case (None, None) =>
@@ -118,5 +119,5 @@ class AccountLinker @Inject() (userRepository: UserRepository)(implicit ec: Exec
             Failure(new Exception(s"Failed to create user: ${ex.getMessage}"))
           }
       }
-    } flatMap identity
+    } yield result
 }

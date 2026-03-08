@@ -12,9 +12,15 @@ import play.api.libs.json.OFormat
 import actions.AuthenticatedRequest
 import actions.AuthAction
 import services.{AccountLinker, OAuth2Service, PendingLinkStore, StateNonceStore}
+import scala.util.{Success, Failure}
 
 case class LoginRequest(username: String, password: String)
 case class LoginResponse(token: String, username: String)
+case class LinkAccountRequest(linkToken: String)
+
+object LinkAccountRequest {
+  implicit val format: OFormat[LinkAccountRequest] = Json.format[LinkAccountRequest]
+}
 
 @Singleton
 class LoginController @Inject() (
@@ -95,7 +101,7 @@ class LoginController @Inject() (
                   oauth2Service.validateIdToken(tokenResp.idToken, stateData.nonce) match {
                     case Failure(_) =>
                       Future.successful(Redirect("/login?error=invalid_id_token"))
-                    case Success(claims) if !claims.emailVerified =>
+                    case Success(claims) if !claims.email_verified =>
                       Future.successful(Redirect("/login?error=email_not_verified"))
                     case Success(claims) =>
                       val expiresAt = (System.currentTimeMillis() / 1000) + tokenResp.expiresIn
@@ -110,7 +116,7 @@ class LoginController @Inject() (
 
                         case None =>
                           // 2) Email exists but not linked -> require confirmation
-                          userRepository.findByEmail(claims.email).map {
+                          userRepository.findByEmail(claims.email).flatMap {
                             case Some(_) =>
                               val linkToken = pendingLinkStore.create(
                                 googleId = claims.sub,
@@ -120,12 +126,14 @@ class LoginController @Inject() (
                                 expiresAt = expiresAt,
                                 pictureUrl = None
                               )
-                              Conflict(
-                                Json.obj(
-                                  "linkRequired" -> true,
-                                  "linkToken"    -> linkToken,
-                                  "email"        -> claims.email,
-                                  "message"      -> "Please login with password to confirm linking."
+                              Future.successful(
+                                Conflict(
+                                  Json.obj(
+                                    "linkRequired" -> true,
+                                    "linkToken"    -> linkToken,
+                                    "email"        -> claims.email,
+                                    "message"      -> "Please login with password to confirm linking."
+                                  )
                                 )
                               )
 

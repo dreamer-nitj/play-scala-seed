@@ -31,7 +31,10 @@ libraryDependencies ++= Seq(
 
 // libraryDependencies += "org.playframework" %% "play-ws" % "2.9.4"
 // libraryDependencies += "org.playframework" %% "play-ws" % "2.8.18"
-libraryDependencies += "org.playframework" %% "play-ws" % "3.0.1"
+libraryDependencies += "org.playframework" %% "play-ahc-ws" % "3.0.1"
+
+// to load environment variables from .env file
+libraryDependencies += "io.github.cdimascio" % "java-dotenv" % "5.2.2"
 
 // Adds additional packages into Twirl
 //TwirlKeys.templateImports += "com.example.controllers._"

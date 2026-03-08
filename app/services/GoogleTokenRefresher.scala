@@ -3,7 +3,7 @@ package services
 import javax.inject.{Inject, Singleton}
 import play.api.Configuration
 import play.api.Logger
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}

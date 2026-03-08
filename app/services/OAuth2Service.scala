@@ -7,13 +7,14 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import java.util.Base64
 import scala.util.{Failure, Success, Try}
+import com.fasterxml.jackson.annotation.JsonProperty
 
 case class GoogleTokenResponse(
-  accessToken: String,
-  expiresIn: Int,
-  refreshToken: Option[String],
-  idToken: String,
-  tokenType: String
+  @JsonProperty("access_token") accessToken: String,
+  @JsonProperty("expires_in") expiresIn: Int,
+  @JsonProperty("refresh_token") refreshToken: Option[String],
+  @JsonProperty("id_token") idToken: String,
+  @JsonProperty("token_type") tokenType: String
 )
 
 case class GoogleUserInfo(
@@ -27,8 +28,9 @@ case class GoogleUserInfo(
 case class OAuthClaims(
   sub: String,
   email: String,
-  emailVerified: Boolean,
+  email_verified: Boolean,
   name: Option[String],
+  nonce: String,
   iat: Long,
   exp: Long
 )
@@ -46,9 +48,51 @@ class OAuth2Service @Inject() (
   private val userInfoUri  = config.get[String]("google.oauth.userinfo-uri")
   private val scopes       = config.get[String]("google.oauth.scopes")
 
-  implicit val googleTokenResponseFormat: OFormat[GoogleTokenResponse] = Json.format[GoogleTokenResponse]
+  implicit val googleTokenResponseFormat: OFormat[GoogleTokenResponse] = new OFormat[GoogleTokenResponse] {
+    def reads(json: JsValue): JsResult[GoogleTokenResponse] = {
+      for {
+        accessToken <- (json \ "access_token").validate[String]
+        expiresIn <- (json \ "expires_in").validate[Int]
+        refreshToken <- (json \ "refresh_token").validateOpt[String]
+        idToken <- (json \ "id_token").validate[String]
+        tokenType <- (json \ "token_type").validate[String]
+      } yield GoogleTokenResponse(accessToken, expiresIn, refreshToken, idToken, tokenType)
+    }
+
+    def writes(o: GoogleTokenResponse): JsObject = Json.obj(
+      "access_token" -> o.accessToken,
+      "expires_in" -> o.expiresIn,
+      "refresh_token" -> o.refreshToken,
+      "id_token" -> o.idToken,
+      "token_type" -> o.tokenType
+    )
+  }
+  
   implicit val googleUserInfoFormat: OFormat[GoogleUserInfo]           = Json.format[GoogleUserInfo]
-  implicit val oAuthClaimsFormat: OFormat[OAuthClaims]                 = Json.format[OAuthClaims]
+  
+  implicit val oAuthClaimsFormat: OFormat[OAuthClaims] = new OFormat[OAuthClaims] {
+    def reads(json: JsValue): JsResult[OAuthClaims] = {
+      for {
+        sub <- (json \ "sub").validate[String]
+        email <- (json \ "email").validate[String]
+        emailVerified <- (json \ "email_verified").validate[Boolean]
+        name <- (json \ "name").validateOpt[String]
+        nonce <- (json \ "nonce").validate[String]
+        iat <- (json \ "iat").validate[Long]
+        exp <- (json \ "exp").validate[Long]
+      } yield OAuthClaims(sub, email, emailVerified, name, nonce, iat, exp)
+    }
+
+    def writes(o: OAuthClaims): JsObject = Json.obj(
+      "sub" -> o.sub,
+      "email" -> o.email,
+      "email_verified" -> o.email_verified,
+      "name" -> o.name,
+      "nonce" -> o.nonce,
+      "iat" -> o.iat,
+      "exp" -> o.exp
+    )
+  }
 
   /** Generate Google authorization URL with PKCE
     */
@@ -71,28 +115,27 @@ class OAuth2Service @Inject() (
 
   /** Exchange authorization code for tokens
     */
-  def exchangeCodeForToken(code: String, codeVerifier: String): Future[Try[GoogleTokenResponse]] =
+  def exchangeCodeForToken(code: String, codeVerifier: String): Future[Try[GoogleTokenResponse]] = {
+    val params = s"grant_type=authorization_code&code=$code&client_id=$clientId&client_secret=$clientSecret&redirect_uri=${java.net.URLEncoder.encode(redirectUri, "UTF-8")}&code_verifier=$codeVerifier"
+    
     ws.url(tokenUri)
-      .post(
-        Map(
-          "grant_type"    -> "authorization_code",
-          "code"          -> code,
-          "client_id"     -> clientId,
-          "client_secret" -> clientSecret,
-          "redirect_uri"  -> redirectUri,
-          "code_verifier" -> codeVerifier
-        )
-      )
+      .withHttpHeaders("Content-Type" -> "application/x-www-form-urlencoded")
+      .post(params)
       .map { response =>
+        println(s"[OAuth2Service] Token exchange response status: ${response.status}")
+        println(s"[OAuth2Service] Token exchange response body: ${response.body}")
         if (response.status == 200) {
-          Success(response.json.as[GoogleTokenResponse])
+          Try(response.json.as[GoogleTokenResponse])
         } else {
-          Failure(new Exception(s"Token exchange failed: ${response.statusText}"))
+          Failure(new Exception(s"Token exchange failed: ${response.status} ${response.statusText} - ${response.body}"))
         }
       }
       .recover { case ex: Exception =>
+        println(s"[OAuth2Service] Token exchange error: ${ex.getMessage}")
+        ex.printStackTrace()
         Failure(new Exception(s"Token exchange error: ${ex.getMessage}", ex))
       }
+  }
 
   /** Validate and decode ID token (JWT) Note: In production, verify signature with Google's public keys
     */
@@ -107,10 +150,14 @@ class OAuth2Service @Inject() (
       val payload = parts(1)
       val padded  = payload + "=" * (4 - payload.length % 4)
       val decoded = new String(Base64.getUrlDecoder.decode(padded))
+      println(s"[OAuth2Service] ID Token payload: $decoded")
+      
       val claims  = Json.parse(decoded).as[OAuthClaims]
+      println(s"[OAuth2Service] Parsed claims: $claims")
 
       // Validate nonce
-      if ((Json.parse(decoded) \ "nonce").asOpt[String] != Some(nonce)) {
+      if (claims.nonce != nonce) {
+        println(s"[OAuth2Service] Nonce mismatch: expected=$nonce, got=${claims.nonce}")
         throw new Exception("Nonce mismatch - possible replay attack")
       }
 
@@ -142,24 +189,21 @@ class OAuth2Service @Inject() (
 
   /** Refresh access token using refresh token
     */
-  def refreshAccessToken(refreshToken: String): Future[Try[GoogleTokenResponse]] =
+  def refreshAccessToken(refreshToken: String): Future[Try[GoogleTokenResponse]] = {
+    val params = s"grant_type=refresh_token&refresh_token=$refreshToken&client_id=$clientId&client_secret=$clientSecret"
+    
     ws.url(tokenUri)
-      .post(
-        Map(
-          "grant_type"    -> "refresh_token",
-          "refresh_token" -> refreshToken,
-          "client_id"     -> clientId,
-          "client_secret" -> clientSecret
-        )
-      )
+      .withHttpHeaders("Content-Type" -> "application/x-www-form-urlencoded")
+      .post(params)
       .map { response =>
         if (response.status == 200) {
-          Success(response.json.as[GoogleTokenResponse])
+          Try(response.json.as[GoogleTokenResponse])
         } else {
-          Failure(new Exception(s"Token refresh failed: ${response.statusText}"))
+          Failure(new Exception(s"Token refresh failed: ${response.status} ${response.statusText} - ${response.body}"))
         }
       }
       .recover { case ex: Exception =>
         Failure(new Exception(s"Token refresh error: ${ex.getMessage}", ex))
       }
+  }
 }
