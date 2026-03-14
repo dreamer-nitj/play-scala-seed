@@ -1,0 +1,49 @@
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+        exclude: '\.bloop/.*\.json$'
+      - id: trailing-whitespace
+        exclude: '\.bloop/.*\.json$'
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-json
+      - id: check-case-conflict
+      - id: no-commit-to-branch
+        args: [--branch, main]
+
+#  - repo: https://github.com/Yelp/detect-secrets
+#    rev: v1.4.0
+#    hooks:
+#      - id: detect-secrets
+#        args: ['--baseline', '.secrets.baseline']
+
+  - repo: local
+    hooks:
+      - id: scala-println
+        name: scala-println
+        entry: 'println\('
+        language: pygrep
+        types: [scala]
+      - id: todo-fixme
+        name: todo-fixme
+        entry: 'TODO|FIXME'
+        language: pygrep
+        types: [text]
+        exclude: '.pre-commit-config.yaml'
+      - id: scalafmt
+        name: scalafmt
+        description: Formats Scala code using scalafmt.
+        entry: sbt scalafmtAll
+        language: system
+        pass_filenames: false
+      - id: sbt-compile
+        name: sbt-compile
+        description: Ensures the project compiles before committing.
+        entry: sbt compile
+        language: system
+        pass_filenames: false

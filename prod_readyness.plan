@@ -1,6 +1,6 @@
 To get this little seed project ready for **production‑quality Scala/Play development** you don’t need a complete rewrite – you just want to grow it in the directions that real teams follow.
 
-Below I’ve sketched the main areas where you can improve the structure, tooling and “plumbing”.  
+Below I’ve sketched the main areas where you can improve the structure, tooling and “plumbing”.
 You can treat the list as a checklist; pick the items that match the size of your app.
 
 ---
@@ -9,7 +9,7 @@ You can treat the list as a checklist; pick the items that match the size of you
 
 The current flat layout is fine for a toy app, but once you add features you’ll want:
 
-1. **Multi‑module build**  
+1. **Multi‑module build**
    ```text
    root/                        ← meta‑project
      api/                       ← Play “backend” (controllers, services, dao…)
@@ -17,22 +17,22 @@ The current flat layout is fine for a toy app, but once you add features you’l
      common/                    ← shared types, utils, models
      core/                      ← business logic
    ```
-   *Use `lazy val api = (project in file("api")).enablePlugins(PlayScala)` etc.*  
+   *Use `lazy val api = (project in file("api")).enablePlugins(PlayScala)` etc.*
    Modules let you compile/test independently and reuse code.
 
-2. **project helpers**  
-   - Centralise version numbers in `project/Dependencies.scala`  
-   - Add `autoAPIMappings` and `scalafmt` settings  
+2. **project helpers**
+   - Centralise version numbers in `project/Dependencies.scala`
+   - Add `autoAPIMappings` and `scalafmt` settings
    - Keep build.properties pinned to a stable sbt (1.9.x or 1.10.x when ready)
 
-3. **Source layout**  
+3. **Source layout**
    - controllers, services, dao, models – you already have this, keep it.
    - Inside `services` split by domain (e.g. `auth`, `payment`, …).
    - Add `app/helpers/` for reusable pieces (JWT util, converters, etc.)
 
-4. **Configuration separation**  
+4. **Configuration separation**
    - application.conf only contains defaults; override with `application.{dev,test,prod}.conf`.
-   - Use `reference.conf` in libraries/modules.  
+   - Use `reference.conf` in libraries/modules.
    - Environment variables via ${?VAR} as you already do.
 
 ---
@@ -52,7 +52,7 @@ The current flat layout is fine for a toy app, but once you add features you’l
 - **CI/CD**
   - You already have a GitHub Actions job. Extend it with:
     - `sbt compile` → `sbt scalafmtCheck` → `sbt test` → `sbt coverage` (coveralls)
-    - Docker build/push step (to ECR/GCR/…) 
+    - Docker build/push step (to ECR/GCR/…)
     - Promotion pipelines (dev → staging → prod).
 
 ---
@@ -113,7 +113,7 @@ The current flat layout is fine for a toy app, but once you add features you’l
   - If you add Kafka/Rabbit, put the code under `app/messaging/` with Akka Streams.
   - Use a Guice `Module` to bind singletons.
 
-- **Event sourcing**  
+- **Event sourcing**
   - For larger apps consider actors or an `event` package with typed events.
 
 ---
@@ -131,7 +131,7 @@ The current flat layout is fine for a toy app, but once you add features you’l
 | Documentation | README, contributing, architecture |
 
 Start by converting the flat project into two or three modules (e.g. `api` + `web` +
-`common`) and gradually add the above pieces as the application grows.  
+`common`) and gradually add the above pieces as the application grows.
 The existing code already follows Play’s “MVC + services” pattern, so you’re on the
 right track – just formalise it with clearer boundaries, configuration layers and
 build automation for production.
