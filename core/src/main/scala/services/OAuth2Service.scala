@@ -2,7 +2,7 @@ package services
 
 import play.api.libs.json._
 import play.api.libs.ws.WSClient
-import play.api.Configuration
+import play.api.{Configuration, Logger}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import java.util.Base64
@@ -40,6 +40,8 @@ class OAuth2Service @Inject() (
   config: Configuration,
   ws: WSClient
 )(implicit ec: ExecutionContext) {
+
+  private val logger = Logger(this.getClass)
 
   private val clientId     = config.get[String]("google.oauth.client-id")
   private val clientSecret = config.get[String]("google.oauth.client-secret")
@@ -124,8 +126,8 @@ class OAuth2Service @Inject() (
       .withHttpHeaders("Content-Type" -> "application/x-www-form-urlencoded")
       .post(params)
       .map { response =>
-        println(s"[OAuth2Service] Token exchange response status: ${response.status}")
-        println(s"[OAuth2Service] Token exchange response body: ${response.body}")
+        logger.debug(s"Token exchange response status: ${response.status}")
+        logger.debug(s"Token exchange response body: ${response.body}")
         if (response.status == 200) {
           Try(response.json.as[GoogleTokenResponse])
         } else {
@@ -133,8 +135,7 @@ class OAuth2Service @Inject() (
         }
       }
       .recover { case ex: Exception =>
-        println(s"[OAuth2Service] Token exchange error: ${ex.getMessage}")
-        ex.printStackTrace()
+        logger.error(s"Token exchange error: ${ex.getMessage}", ex)
         Failure(new Exception(s"Token exchange error: ${ex.getMessage}", ex))
       }
   }
@@ -153,14 +154,14 @@ class OAuth2Service @Inject() (
       val payload = parts(1)
       val padded  = payload + "=" * (4 - payload.length % 4)
       val decoded = new String(Base64.getUrlDecoder.decode(padded))
-      println(s"[OAuth2Service] ID Token payload: $decoded")
+      logger.debug(s"ID Token payload: $decoded")
 
       val claims = Json.parse(decoded).as[OAuthClaims]
-      println(s"[OAuth2Service] Parsed claims: $claims")
+      logger.debug(s"Parsed claims: $claims")
 
       // Validate nonce
       if (claims.nonce != nonce) {
-        println(s"[OAuth2Service] Nonce mismatch: expected=$nonce, got=${claims.nonce}")
+        logger.warn(s"Nonce mismatch: expected=$nonce, got=${claims.nonce}")
         throw new Exception("Nonce mismatch - possible replay attack")
       }
 
