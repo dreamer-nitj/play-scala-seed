@@ -15,8 +15,9 @@ import org.apache.pekko.actor.Props
 import actions.AuthAction
 import actions.AuthenticatedRequest
 
-/** This controller creates an `Action` to handle HTTP requests to the application's home page.
-  */
+/**
+ * This controller creates an `Action` to handle HTTP requests to the application's home page.
+ */
 @Singleton
 class HomeController @Inject() (
   val controllerComponents: ControllerComponents,
@@ -28,11 +29,12 @@ class HomeController @Inject() (
   implicit val timeout: Timeout = 5.seconds
   private val userActor         = actorSystem.actorOf(Props(new UserActor(userRepository)))
 
-  /** Create an Action to render an HTML page.
-    *
-    * The configuration in the `routes` file means that this method will be called when the application receives a `GET`
-    * request with a path of `/`.
-    */
+  /**
+   * Create an Action to render an HTML page.
+   *
+   * The configuration in the `routes` file means that this method will be called when the application receives a `GET`
+   * request with a path of `/`.
+   */
   def index() = authAction { implicit request: Request[AnyContent] =>
     Ok(views.html.index())
   }

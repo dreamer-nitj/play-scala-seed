@@ -34,23 +34,27 @@ class UserRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(implic
   // Delete a user
   def deleteUser(id: Int): Future[Int] = dbConfig.db.run(users.filter(_.id === id).delete)
 
-  /** Find user by username
-    */
+  /**
+   * Find user by username
+   */
   def findByUsername(username: String): Future[Option[User]] =
     dbConfig.db.run(users.filter(_.username === username).result.headOption)
 
-  /** Find user by email
-    */
+  /**
+   * Find user by email
+   */
   def findByEmail(email: String): Future[Option[User]] =
     dbConfig.db.run(users.filter(_.email === email).result.headOption)
 
-  /** Find user by Google ID
-    */
+  /**
+   * Find user by Google ID
+   */
   def findByGoogleId(googleId: String): Future[Option[User]] =
     dbConfig.db.run(users.filter(_.googleId === googleId).result.headOption)
 
-  /** Link existing account to Google OAuth
-    */
+  /**
+   * Link existing account to Google OAuth
+   */
   def linkOAuthAccount(
     userId: Int,
     googleId: String,
@@ -89,8 +93,9 @@ class UserRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(implic
         )
     )
 
-  /** Create new OAuth user
-    */
+  /**
+   * Create new OAuth user
+   */
   def createOAuthUser(
     username: String,
     email: String,
@@ -116,8 +121,9 @@ class UserRepository @Inject() (dbConfigProvider: DatabaseConfigProvider)(implic
       )
     )
 
-  /** Update Google refresh token
-    */
+  /**
+   * Update Google refresh token
+   */
   def updateGoogleToken(userId: Int, accessToken: String, expiresAt: Long): Future[Int] =
     dbConfig.db.run(
       users

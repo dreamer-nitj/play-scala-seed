@@ -15,8 +15,9 @@ class StateNonceStore @Inject() (implicit ec: ExecutionContext) {
   private val store: mutable.Map[String, StateNonceData] = mutable.Map()
   private val ttl: Long                                  = 5 * 60 * 1000 // 5 minutes
 
-  /** Generate and store state/nonce pair
-    */
+  /**
+   * Generate and store state/nonce pair
+   */
   def generateAndStore(): StateNonceData = {
     val state        = UUID.randomUUID().toString
     val nonce        = UUID.randomUUID().toString
@@ -27,8 +28,9 @@ class StateNonceStore @Inject() (implicit ec: ExecutionContext) {
     data
   }
 
-  /** Validate and retrieve state/nonce data
-    */
+  /**
+   * Validate and retrieve state/nonce data
+   */
   def validate(state: String): Option[StateNonceData] =
     store.get(state).flatMap { data =>
       val isExpired = System.currentTimeMillis() - data.timestamp > ttl
@@ -41,16 +43,18 @@ class StateNonceStore @Inject() (implicit ec: ExecutionContext) {
       }
     }
 
-  /** Generate PKCE code verifier (43-128 chars, unreserved characters)
-    */
+  /**
+   * Generate PKCE code verifier (43-128 chars, unreserved characters)
+   */
   private def generateCodeVerifier(): String = {
     val chars  = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
     val random = scala.util.Random
     (1 to 64).map(_ => chars(random.nextInt(chars.length))).mkString
   }
 
-  /** Generate PKCE code challenge from verifier (S256)
-    */
+  /**
+   * Generate PKCE code challenge from verifier (S256)
+   */
   def generateCodeChallenge(codeVerifier: String): String = {
     import java.security.MessageDigest
     import java.util.Base64

@@ -49,53 +49,52 @@ class OAuth2Service @Inject() (
   private val scopes       = config.get[String]("google.oauth.scopes")
 
   implicit val googleTokenResponseFormat: OFormat[GoogleTokenResponse] = new OFormat[GoogleTokenResponse] {
-    def reads(json: JsValue): JsResult[GoogleTokenResponse] = {
+    def reads(json: JsValue): JsResult[GoogleTokenResponse] =
       for {
-        accessToken <- (json \ "access_token").validate[String]
-        expiresIn <- (json \ "expires_in").validate[Int]
+        accessToken  <- (json \ "access_token").validate[String]
+        expiresIn    <- (json \ "expires_in").validate[Int]
         refreshToken <- (json \ "refresh_token").validateOpt[String]
-        idToken <- (json \ "id_token").validate[String]
-        tokenType <- (json \ "token_type").validate[String]
+        idToken      <- (json \ "id_token").validate[String]
+        tokenType    <- (json \ "token_type").validate[String]
       } yield GoogleTokenResponse(accessToken, expiresIn, refreshToken, idToken, tokenType)
-    }
 
     def writes(o: GoogleTokenResponse): JsObject = Json.obj(
-      "access_token" -> o.accessToken,
-      "expires_in" -> o.expiresIn,
+      "access_token"  -> o.accessToken,
+      "expires_in"    -> o.expiresIn,
       "refresh_token" -> o.refreshToken,
-      "id_token" -> o.idToken,
-      "token_type" -> o.tokenType
+      "id_token"      -> o.idToken,
+      "token_type"    -> o.tokenType
     )
   }
-  
-  implicit val googleUserInfoFormat: OFormat[GoogleUserInfo]           = Json.format[GoogleUserInfo]
-  
+
+  implicit val googleUserInfoFormat: OFormat[GoogleUserInfo] = Json.format[GoogleUserInfo]
+
   implicit val oAuthClaimsFormat: OFormat[OAuthClaims] = new OFormat[OAuthClaims] {
-    def reads(json: JsValue): JsResult[OAuthClaims] = {
+    def reads(json: JsValue): JsResult[OAuthClaims] =
       for {
-        sub <- (json \ "sub").validate[String]
-        email <- (json \ "email").validate[String]
+        sub           <- (json \ "sub").validate[String]
+        email         <- (json \ "email").validate[String]
         emailVerified <- (json \ "email_verified").validate[Boolean]
-        name <- (json \ "name").validateOpt[String]
-        nonce <- (json \ "nonce").validate[String]
-        iat <- (json \ "iat").validate[Long]
-        exp <- (json \ "exp").validate[Long]
+        name          <- (json \ "name").validateOpt[String]
+        nonce         <- (json \ "nonce").validate[String]
+        iat           <- (json \ "iat").validate[Long]
+        exp           <- (json \ "exp").validate[Long]
       } yield OAuthClaims(sub, email, emailVerified, name, nonce, iat, exp)
-    }
 
     def writes(o: OAuthClaims): JsObject = Json.obj(
-      "sub" -> o.sub,
-      "email" -> o.email,
+      "sub"            -> o.sub,
+      "email"          -> o.email,
       "email_verified" -> o.email_verified,
-      "name" -> o.name,
-      "nonce" -> o.nonce,
-      "iat" -> o.iat,
-      "exp" -> o.exp
+      "name"           -> o.name,
+      "nonce"          -> o.nonce,
+      "iat"            -> o.iat,
+      "exp"            -> o.exp
     )
   }
 
-  /** Generate Google authorization URL with PKCE
-    */
+  /**
+   * Generate Google authorization URL with PKCE
+   */
   def getAuthorizationUrl(state: String, nonce: String, codeChallenge: String): String = {
     val params = Map(
       "client_id"             -> clientId,
@@ -113,11 +112,14 @@ class OAuth2Service @Inject() (
     s"${config.get[String]("google.oauth.authorization-uri")}?$queryString"
   }
 
-  /** Exchange authorization code for tokens
-    */
+  /**
+   * Exchange authorization code for tokens
+   */
   def exchangeCodeForToken(code: String, codeVerifier: String): Future[Try[GoogleTokenResponse]] = {
-    val params = s"grant_type=authorization_code&code=$code&client_id=$clientId&client_secret=$clientSecret&redirect_uri=${java.net.URLEncoder.encode(redirectUri, "UTF-8")}&code_verifier=$codeVerifier"
-    
+    val params =
+      s"grant_type=authorization_code&code=$code&client_id=$clientId&client_secret=$clientSecret&redirect_uri=${java.net.URLEncoder
+          .encode(redirectUri, "UTF-8")}&code_verifier=$codeVerifier"
+
     ws.url(tokenUri)
       .withHttpHeaders("Content-Type" -> "application/x-www-form-urlencoded")
       .post(params)
@@ -137,8 +139,9 @@ class OAuth2Service @Inject() (
       }
   }
 
-  /** Validate and decode ID token (JWT) Note: In production, verify signature with Google's public keys
-    */
+  /**
+   * Validate and decode ID token (JWT) Note: In production, verify signature with Google's public keys
+   */
   def validateIdToken(idToken: String, nonce: String): Try[OAuthClaims] =
     Try {
       val parts = idToken.split("\\.")
@@ -151,8 +154,8 @@ class OAuth2Service @Inject() (
       val padded  = payload + "=" * (4 - payload.length % 4)
       val decoded = new String(Base64.getUrlDecoder.decode(padded))
       println(s"[OAuth2Service] ID Token payload: $decoded")
-      
-      val claims  = Json.parse(decoded).as[OAuthClaims]
+
+      val claims = Json.parse(decoded).as[OAuthClaims]
       println(s"[OAuth2Service] Parsed claims: $claims")
 
       // Validate nonce
@@ -170,8 +173,9 @@ class OAuth2Service @Inject() (
       claims
     }
 
-  /** Fetch user info from Google using access token
-    */
+  /**
+   * Fetch user info from Google using access token
+   */
   def getUserInfo(accessToken: String): Future[Try[GoogleUserInfo]] =
     ws.url(userInfoUri)
       .withHttpHeaders("Authorization" -> s"Bearer $accessToken")
@@ -187,11 +191,12 @@ class OAuth2Service @Inject() (
         Failure(new Exception(s"User info fetch error: ${ex.getMessage}", ex))
       }
 
-  /** Refresh access token using refresh token
-    */
+  /**
+   * Refresh access token using refresh token
+   */
   def refreshAccessToken(refreshToken: String): Future[Try[GoogleTokenResponse]] = {
     val params = s"grant_type=refresh_token&refresh_token=$refreshToken&client_id=$clientId&client_secret=$clientSecret"
-    
+
     ws.url(tokenUri)
       .withHttpHeaders("Content-Type" -> "application/x-www-form-urlencoded")
       .post(params)

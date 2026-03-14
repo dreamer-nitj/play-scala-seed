@@ -35,7 +35,7 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_OAUTH_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_OAUTH_CLIENT_SECRET }}
           GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }} 
-        run: sbt test
+        run: sbt "project api" test
       # Optional: This step uploads information to the GitHub dependency graph and unblocking Dependabot alerts for the repository
       - name: Upload dependency graph
         uses: scalacenter/sbt-dependency-submission@ab086b50c947c9774b70f39fc7f6e20ca2706c91

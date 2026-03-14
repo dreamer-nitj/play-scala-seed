@@ -12,8 +12,9 @@ case class LinkResponse(success: Boolean, message: String, userId: Option[Int] =
 @Singleton
 class AccountLinker @Inject() (userRepository: UserRepository)(implicit ec: ExecutionContext) {
 
-  /** Link OAuth account to existing user (requires confirmation) Checks if email matches and prevents hijacking
-    */
+  /**
+   * Link OAuth account to existing user (requires confirmation) Checks if email matches and prevents hijacking
+   */
   def linkAccount(
     userId: Int,
     googleId: String,
@@ -68,8 +69,9 @@ class AccountLinker @Inject() (userRepository: UserRepository)(implicit ec: Exec
       }
     }
 
-  /** Create new user from OAuth (auto-registration)
-    */
+  /**
+   * Create new user from OAuth (auto-registration)
+   */
   def createOAuthUser(
     googleId: String,
     googleEmail: String,

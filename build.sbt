@@ -1,43 +1,63 @@
-name         := """play-scala-seed"""
-organization := "com.example"
+// build.sbt
+import Dependencies._
 
-version := "1.0-SNAPSHOT"
+ThisBuild / organization := "com.example"
+ThisBuild / scalaVersion := scalaV
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala)
-
-scalaVersion := "2.13.18"
-
-libraryDependencies += guice
-libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.2" % Test
-libraryDependencies ++= Seq(
-  "com.typesafe.slick" %% "slick" % "3.5.1",
-  // "com.typesafe.slick" %% "slick-hikaricp"  % "3.5.1",
-  "com.h2database" % "h2" % "2.2.224"
-  // "org.slf4j"           % "slf4j-nop"       % "2.0.12"
+// Common settings
+lazy val commonSettings = Seq(
+  scalacOptions ++= Seq(
+    "-deprecation",
+    "-encoding", "UTF-8",
+    "-feature",
+    "-unchecked",
+    "-Xfatal-warnings"
+  ),
+  // Enable Scalafmt
+  scalafmtOnCompile := true,
+  // Enable auto-generated API mappings
+  autoAPIMappings := true
 )
 
-libraryDependencies ++= Seq(
-  "org.playframework" %% "play-slick"            % "6.1.0",
-  "org.playframework" %% "play-slick-evolutions" % "6.1.0"
-)
+// Common module - shared utilities
+lazy val common = (project in file("common"))
+  .settings(
+    commonSettings,
+    name := "play-scala-seed-common",
+    libraryDependencies ++= commonDeps
+  )
 
-// libraryDependencies += "com.typesafe.akka" %% "akka-actor" % "2.6.21"
+// Core module - business logic
+lazy val core = (project in file("core"))
+  .dependsOn(common)
+  .settings(
+    commonSettings,
+    name := "play-scala-seed-core",
+    libraryDependencies ++= coreDeps
+  )
 
-libraryDependencies ++= Seq(
-  "io.jsonwebtoken" % "jjwt-api"     % "0.11.5",
-  "io.jsonwebtoken" % "jjwt-impl"    % "0.11.5",
-  "io.jsonwebtoken" % "jjwt-jackson" % "0.11.5"
-)
+// API module - Play web application
+lazy val api = (project in file("api"))
+  .dependsOn(core)
+  .enablePlugins(PlayScala)
+  .settings(
+    commonSettings,
+    name := "play-scala-seed-api",
+    libraryDependencies ++= apiDeps,
+    // Play-specific settings
+    PlayKeys.playDefaultPort := 9000,
+    // Routes import
+    routesImport ++= Seq(
+      "models._",
+      "utils._"
+    )
+  )
 
-// libraryDependencies += "org.playframework" %% "play-ws" % "2.9.4"
-// libraryDependencies += "org.playframework" %% "play-ws" % "2.8.18"
-libraryDependencies += "org.playframework" %% "play-ahc-ws" % "3.0.1"
-
-// to load environment variables from .env file
-libraryDependencies += "io.github.cdimascio" % "java-dotenv" % "5.2.2"
-
-// Adds additional packages into Twirl
-//TwirlKeys.templateImports += "com.example.controllers._"
-
-// Adds additional packages into conf/routes
-// play.sbt.routes.RoutesKeys.routesImport += "com.example.binders._"
+// Root project
+lazy val root = (project in file("."))
+  .aggregate(common, core, api)
+  .settings(
+    name := "play-scala-seed",
+    // Don't publish the root project
+    publish / skip := true
+  )
